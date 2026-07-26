@@ -17,7 +17,7 @@ const ROADMAP = [
   { phase: "Fase 0", title: "Fundação e arquitetura", done: true },
   { phase: "Fase 1", title: "Banco de dados e autenticação", done: true },
   { phase: "Fase 2", title: "Shell do app e painel", done: true },
-  { phase: "Fase 3", title: "Editor de currículos", done: false },
+  { phase: "Fase 3", title: "Editor de currículos", done: true },
   { phase: "Fase 4", title: "Motor de modelos e preview", done: false },
   { phase: "Fase 5", title: "Exportação em PDF", done: false },
   { phase: "Fase 6", title: "Gestão de clientes", done: false },
@@ -56,7 +56,7 @@ export default async function HomePage() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-14 safe-x sm:py-20">
-        <Badge variant="secondary">Fase 2 · Shell do app e painel</Badge>
+        <Badge variant="secondary">Fase 3 · Editor de currículos</Badge>
 
         <h1 className="mt-5 text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
           {site.tagline}

@@ -9,8 +9,8 @@ a person.
 | **0**  | Foundation and architecture      | ✅ done |
 | **1**  | Database and authentication      | ✅ done |
 | **2**  | App shell and dashboard          | ✅ done |
-| **3**  | Resume builder (core)            | ⏳ next |
-| **4**  | Template engine and live preview | —       |
+| **3**  | Resume builder (core)            | ✅ done |
+| **4**  | Template engine and live preview | ⏳ next |
 | **5**  | PDF export                       | —       |
 | **6**  | Client management (CRM)          | —       |
 | **7**  | Version history                  | —       |
@@ -57,12 +57,19 @@ zeros is not information.
 
 **Deliverable:** full navigation with metrics read from the database.
 
-## Phase 3 — Resume builder (core)
+## Phase 3 — Resume builder (core) ✅
 
-`ResumeDocument` schema, every section (personal data, summary, experience,
-education, skills, languages, certifications, projects, courses), debounced
-autosave with a save indicator, drag-and-drop reordering, undo/redo, photo
-upload.
+`ResumeDocument` schema with ten section types (objective, summary, experience,
+education, skills, languages, certifications, projects, courses, custom),
+autosave with a save indicator, drag-and-drop reordering of both sections and
+the items inside them, undo/redo with coalescing, section visibility toggles,
+renameable section headings, and photo upload.
+
+The storage schema is **permissive by design** — see the note in
+`schemas/document.ts`. Autosave fires while the user is mid-word, so a
+"required" field at the storage layer would mean losing work. What a resume
+still needs is computed separately by `validation/advisories.ts` and shown as a
+pendency count, never as a save blocker.
 
 **Deliverable:** create and edit a complete resume that persists.
 
