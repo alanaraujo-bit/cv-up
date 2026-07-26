@@ -90,14 +90,47 @@ content (ADR 0003).
 `Resume` and `Client` use soft deletes (`deletedAt`) — this user works with
 other people's data and accidental deletion is unrecoverable otherwise.
 
-Serverless functions exhaust Postgres connections quickly, so the app connects
-through Railway's pooler with `connection_limit=1`.
+### Connecting to Postgres
+
+Prisma 7 requires a driver adapter, so the client is built with `PrismaPg`
+around `DATABASE_URL`. Two details of that URL are load-bearing:
+
+- `connection_limit=1` — each serverless instance keeps a single connection, so
+  a traffic spike cannot exhaust Postgres. `DIRECT_URL`, used by migrations and
+  the seed, carries no such cap.
+- `uselibpqcompat=true` — Railway terminates TLS with a self-signed
+  certificate. Since pg 8.16, `sslmode=require` alone is treated as
+  `verify-full` and the connection is rejected; this flag restores libpq
+  semantics (encrypt, do not verify the chain).
+
+## Authentication
+
+Better Auth owns `User`, `Session`, `Account` and `Verification`; product data
+lives in `Profile` so regenerating the auth schema never touches it. Ids come
+from Prisma's `@default(cuid(2))` (`advanced.database.generateId: false`).
+
+Route protection is two-layered:
+
+1. `src/middleware.ts` — an _optimistic_ redirect that only checks whether a
+   session cookie is present, so a signed-out visitor never sees the app shell
+   flash. It reads the cookie by name rather than importing
+   `better-auth/cookies`, which would pull `jose` into the Edge bundle.
+2. `requireSession()` in the protected layout — the authoritative check.
+
+`?proximo=` on the sign-in page passes through `safeRedirect()`, which rejects
+anything not an internal path. An open redirect on a sign-in screen is a
+phishing primitive.
 
 ## Environment
 
 `process.env` is only read in `src/lib/env.ts`, which validates with Zod at
 startup. A missing variable fails the build instead of a request in production.
 ESLint enforces this.
+
+`@/lib/env` is reachable from the browser bundle through the auth client, so
+anything deriving a value from a **server** variable at module scope must live
+behind `server-only` (see `src/server/auth-config.ts`) — evaluating it on the
+client throws.
 
 ## Design system
 

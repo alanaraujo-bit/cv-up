@@ -2,7 +2,11 @@
 # phase 5) are standalone projects with their own lockfiles, deployed separately.
 
 # sharp: image optimization binaries. unrs-resolver: eslint module resolution.
+# prisma/@prisma/engines: query engine binaries. esbuild: tsx/vitest bundler.
 allowBuilds:
+  "@prisma/engines": true
+  esbuild: true
+  prisma: true
   sharp: true
   unrs-resolver: true
 

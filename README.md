@@ -15,8 +15,8 @@ documentação técnica em inglês.
 | Framework      | Next.js 16 (App Router, React 19)                |
 | Linguagem      | TypeScript (strict + `noUncheckedIndexedAccess`) |
 | UI             | Tailwind CSS 4, shadcn/ui (Radix), Lucide        |
-| Banco          | PostgreSQL + Prisma _(fase 1)_                   |
-| Autenticação   | Better Auth _(fase 1)_                           |
+| Banco          | PostgreSQL (Railway) + Prisma 7                  |
+| Autenticação   | Better Auth                                      |
 | PDF            | Playwright em serviço dedicado _(fase 5)_        |
 | PWA            | Serwist                                          |
 | Testes         | Vitest + Testing Library                         |
@@ -27,10 +27,12 @@ documentação técnica em inglês.
 ```bash
 pnpm install
 cp .env.example .env.local   # ajuste os valores
+pnpm db:migrate              # aplica as migrations
+pnpm db:seed                 # carrega o catálogo de modelos
 pnpm dev                     # http://localhost:3000
 ```
 
-Requer Node 22+ e pnpm.
+Requer Node 22+, pnpm e um PostgreSQL acessível.
 
 ### Scripts
 
@@ -43,6 +45,16 @@ Requer Node 22+ e pnpm.
 | `pnpm test`   | Testes unitários                            |
 | `pnpm format` | Formata com Prettier                        |
 | `pnpm icons`  | Regenera os ícones do PWA a partir do vetor |
+
+### Banco de dados
+
+| Comando            | O que faz                                     |
+| ------------------ | --------------------------------------------- |
+| `pnpm db:migrate`  | Cria e aplica migration em desenvolvimento    |
+| `pnpm db:deploy`   | Aplica migrations pendentes (usado no deploy) |
+| `pnpm db:seed`     | Popula o catálogo de modelos (idempotente)    |
+| `pnpm db:studio`   | Abre o Prisma Studio                          |
+| `pnpm db:generate` | Regenera o Prisma Client                      |
 
 O service worker só é gerado em builds de produção. Para testar o PWA:
 `pnpm build && pnpm start`.

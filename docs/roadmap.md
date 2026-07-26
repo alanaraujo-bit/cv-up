@@ -7,8 +7,8 @@ a person.
 | Phase  | Scope                            | Status  |
 | ------ | -------------------------------- | ------- |
 | **0**  | Foundation and architecture      | ✅ done |
-| **1**  | Database and authentication      | ⏳ next |
-| **2**  | App shell and dashboard          | —       |
+| **1**  | Database and authentication      | ✅ done |
+| **2**  | App shell and dashboard          | ⏳ next |
 | **3**  | Resume builder (core)            | —       |
 | **4**  | Template engine and live preview | —       |
 | **5**  | PDF export                       | —       |
@@ -29,13 +29,18 @@ Vitest, GitHub Actions CI.
 
 **Deliverable:** installable app with working themes, deployed.
 
-## Phase 1 — Database and authentication
+## Phase 1 — Database and authentication ✅
 
-Full Prisma schema and migrations, template seed, Better Auth (email/password +
-Google), protected routes, profile and settings, Railway Postgres wired through
-the connection pooler.
+Prisma 7 with the full schema (13 models, 10 enums) on Railway Postgres, the
+seven-template seed, Better Auth with email/password (Google ready but hidden
+until credentials are configured), session helpers, an optimistic middleware
+redirect plus the authoritative layout guard, `next-safe-action` as the single
+write path, and the profile/settings screens.
 
-**Deliverable:** sign up, sign in, edit profile.
+**Deliverable:** sign up, sign in, edit profile. Verified end to end against a
+production build: protected route redirects when signed out, sign-up issues a
+session cookie, the dashboard renders real data, and a wrong password returns
+`INVALID_EMAIL_OR_PASSWORD` mapped to a Portuguese message.
 
 ## Phase 2 — App shell and dashboard
 

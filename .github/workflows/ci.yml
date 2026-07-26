@@ -15,6 +15,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Placeholder values, not secrets: CI never reaches the database, but the
+    # env schema is still validated so a missing declaration fails here rather
+    # than on Vercel.
+    env:
+      DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci"
+      DIRECT_URL: "postgresql://ci:ci@localhost:5432/ci"
+      BETTER_AUTH_SECRET: "ci-placeholder-secret-not-used-anywhere-0123456789"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+
     steps:
       - uses: actions/checkout@v5
 

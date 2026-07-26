@@ -12,6 +12,7 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     "public/sw.js",
     "public/swe-worker-*.js",
+    "src/generated/**",
   ]),
   {
     rules: {
@@ -41,10 +42,12 @@ const eslintConfig = defineConfig([
     },
   },
   {
-    // Config files and scripts run outside the app and need raw env access.
+    // Config files, scripts and the seed run outside Next.js, which is what
+    // normally loads and validates the environment.
     files: [
       "*.config.{ts,mjs,js}",
       "scripts/**/*.{ts,mjs,js}",
+      "prisma/**/*.ts",
       "src/lib/env.ts",
       "src/app/sw.ts",
     ],

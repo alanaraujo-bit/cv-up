@@ -1,0 +1,398 @@
+// CV UP data model.
+//
+// Identity and metadata are relational; resume content is a validated JSON
+// document (see docs/decisions/0003-resume-content-as-json.md).
+//
+// The auth models (User, Session, Account, Verification) mirror what Better
+// Auth expects. Run `pnpm auth:generate` after changing auth plugins rather
+// than renaming their fields by hand.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum ResumeStatus {
+  DRAFT
+  IN_PROGRESS
+  COMPLETED
+  ARCHIVED
+}
+
+/// Mirrors the workflow of someone writing resumes for other people.
+enum ClientStatus {
+  NEW_REQUEST
+  WAITING_INFO
+  IN_PROGRESS
+  DELIVERED
+  ARCHIVED
+}
+
+enum TemplateCategory {
+  MODERN
+  EXECUTIVE
+  MINIMAL
+  TECH
+  ADMIN
+  FIRST_JOB
+  ATS
+}
+
+enum ExportFormat {
+  PDF
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+enum AIAnalysisType {
+  ATS_SCORE
+  TEXT_IMPROVEMENT
+  JOB_MATCH
+}
+
+enum AIAnalysisStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+enum PlanType {
+  FREE
+  PRO
+  STUDIO
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  RESTORE
+  EXPORT
+}
+
+// ---------------------------------------------------------------------------
+// Auth — owned by Better Auth
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid(2))
+  name          String
+  email         String   @unique
+  emailVerified Boolean  @default(false)
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sessions Session[]
+  accounts Account[]
+
+  profile      Profile?
+  subscription Subscription?
+  clients      Client[]
+  resumes      Resume[]
+  versions     ResumeVersion[]
+  exports      ExportHistory[]
+  analyses     AIAnalysis[]
+  auditLogs    AuditLog[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id @default(cuid(2))
+  token     String   @unique
+  expiresAt DateTime
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid(2))
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  /// Hashed by Better Auth; null for OAuth-only accounts.
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id @default(cuid(2))
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// ---------------------------------------------------------------------------
+// Profile
+// ---------------------------------------------------------------------------
+
+/// Product-side user data, kept out of the Better Auth tables so schema
+/// regeneration never touches it.
+model Profile {
+  id          String    @id @default(cuid(2))
+  displayName String?
+  headline    String?
+  phone       String?
+  city        String?
+  locale      String    @default("pt-BR")
+  onboardedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("profile")
+}
+
+// ---------------------------------------------------------------------------
+// CRM
+// ---------------------------------------------------------------------------
+
+model Client {
+  id     String       @id @default(cuid(2))
+  name   String
+  email  String?
+  phone  String?
+  city   String?
+  status ClientStatus @default(NEW_REQUEST)
+  notes  String?
+
+  /// Soft delete: this data belongs to third parties and is unrecoverable.
+  deletedAt DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumes Resume[]
+
+  @@index([userId, deletedAt])
+  @@index([userId, status])
+  @@map("client")
+}
+
+// ---------------------------------------------------------------------------
+// Resumes
+// ---------------------------------------------------------------------------
+
+model Template {
+  id            String           @id @default(cuid(2))
+  slug          String           @unique
+  name          String
+  description   String
+  category      TemplateCategory
+  /// Resolves to a React component in src/templates/registry.ts.
+  engineKey     String           @unique
+  accentColor   String?
+  previewImage  String?
+  supportsPhoto Boolean          @default(true)
+  atsSafe       Boolean          @default(false)
+  isPremium     Boolean          @default(false)
+  isActive      Boolean          @default(true)
+  sortOrder     Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  resumes Resume[]
+
+  @@index([isActive, sortOrder])
+  @@map("template")
+}
+
+model Resume {
+  id     String       @id @default(cuid(2))
+  title  String
+  status ResumeStatus @default(DRAFT)
+
+  /// The ResumeDocument, validated by Zod on every write.
+  content       Json
+  /// Version of the ResumeDocument shape, for document migrations.
+  schemaVersion Int          @default(1)
+  /// Highest number in ResumeVersion; incremented when a snapshot is taken.
+  latestVersion Int          @default(0)
+
+  lastEditedAt DateTime  @default(now())
+  deletedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId   String?
+  client     Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  templateId String
+  template   Template @relation(fields: [templateId], references: [id], onDelete: Restrict)
+
+  versions ResumeVersion[]
+  exports  ExportHistory[]
+  analyses AIAnalysis[]
+
+  @@index([userId, deletedAt])
+  @@index([userId, status])
+  @@index([userId, lastEditedAt])
+  @@index([clientId])
+  @@map("resume")
+}
+
+/// Immutable snapshot. Restoring copies a snapshot back onto Resume.content.
+model ResumeVersion {
+  id      String  @id @default(cuid(2))
+  version Int
+  label   String?
+  /// Short human summary of what changed, shown in the history list.
+  summary String?
+
+  content       Json
+  schemaVersion Int      @default(1)
+  createdAt     DateTime @default(now())
+
+  resumeId    String
+  resume      Resume          @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?           @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  exports     ExportHistory[]
+
+  @@unique([resumeId, version])
+  @@index([resumeId, createdAt])
+  @@map("resume_version")
+}
+
+// ---------------------------------------------------------------------------
+// Exports, AI, billing, audit
+// ---------------------------------------------------------------------------
+
+model ExportHistory {
+  id           String       @id @default(cuid(2))
+  format       ExportFormat @default(PDF)
+  status       ExportStatus @default(PENDING)
+  templateSlug String
+  fileUrl      String?
+  fileSize     Int?
+  pageCount    Int?
+  error        String?
+  requestedAt  DateTime     @default(now())
+  completedAt  DateTime?
+
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId  String
+  resume    Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  versionId String?
+  version   ResumeVersion? @relation(fields: [versionId], references: [id], onDelete: SetNull)
+
+  @@index([userId, requestedAt])
+  @@index([resumeId, requestedAt])
+  @@index([status])
+  @@map("export_history")
+}
+
+model AIAnalysis {
+  id     String           @id @default(cuid(2))
+  type   AIAnalysisType
+  status AIAnalysisStatus @default(PENDING)
+  input  Json
+  output Json?
+  error  String?
+
+  model            String?
+  promptTokens     Int?
+  completionTokens Int?
+  /// Cost in cents, so AI spend stays attributable per user.
+  costCents        Int?
+
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+
+  userId   String
+  user     User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resumeId String
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([resumeId, type])
+  @@map("ai_analysis")
+}
+
+model Subscription {
+  id                     String             @id @default(cuid(2))
+  plan                   PlanType           @default(FREE)
+  status                 SubscriptionStatus @default(ACTIVE)
+  provider               String?
+  providerCustomerId     String?
+  providerSubscriptionId String?            @unique
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscription")
+}
+
+model AuditLog {
+  id        String      @id @default(cuid(2))
+  entity    String
+  entityId  String
+  action    AuditAction
+  diff      Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime    @default(now())
+
+  actorId String?
+  actor   User?   @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+  @@index([actorId, createdAt])
+  @@map("audit_log")
+}
