@@ -1,0 +1,11 @@
+{
+  /* The service worker runs in a WebWorker scope, whose globals conflict with
+     the DOM lib used by the app. It gets its own compiler config. */
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["esnext", "webworker"],
+    "types": ["@serwist/next/typings"]
+  },
+  "include": ["src/app/sw.ts"],
+  "exclude": []
+}

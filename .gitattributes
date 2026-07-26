@@ -1,0 +1,10 @@
+# Normalise to LF everywhere. Without this, Windows checkouts get CRLF and
+# `prettier --check` fails locally while passing in CI.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+
+pnpm-lock.yaml linguist-generated=true merge=binary
