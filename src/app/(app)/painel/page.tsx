@@ -1,58 +1,77 @@
 import type { Metadata } from "next";
-
+import Link from "next/link";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  ArrowRight,
+  CheckCircle2,
+  FileEdit,
+  FileText,
+  Users,
+} from "lucide-react";
+
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { StatTile } from "@/features/dashboard/components/stat-tile";
+import { getDashboardMetrics } from "@/features/dashboard/service";
 import { getProfile } from "@/features/profile/service";
-import { db } from "@/server/db";
+import { TemplateCard } from "@/features/template/components/template-card";
+import { listTemplates } from "@/features/template/service";
 import { requireUserId } from "@/server/session";
 
-export const metadata: Metadata = {
-  title: "Painel",
-};
+export const metadata: Metadata = { title: "Painel" };
 
-/**
- * Phase 1 lands here after sign-in. The real dashboard — counters, recent
- * resumes, quick actions — is phase 2; nothing is rendered here that is not
- * backed by real data.
- */
 export default async function DashboardPage() {
   const userId = await requireUserId();
-  const [profile, templateCount] = await Promise.all([
+  const [profile, metrics, templates] = await Promise.all([
     getProfile(userId),
-    db.template.count({ where: { isActive: true } }),
+    getDashboardMetrics(userId),
+    listTemplates(3),
   ]);
 
-  const greetingName = (profile?.displayName ?? profile?.name ?? "").split(
-    " ",
-  )[0];
+  const firstName = (profile?.displayName ?? profile?.name ?? "").split(" ")[0];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {greetingName ? `Olá, ${greetingName}` : "Olá"}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Sua conta está pronta. O painel completo chega na próxima etapa.
-        </p>
-      </div>
+    <div className="space-y-8">
+      <PageHeader
+        title={firstName ? `Olá, ${firstName}` : "Painel"}
+        description="Um resumo do seu trabalho."
+      />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Modelos disponíveis</CardTitle>
-          <CardDescription>
-            Catálogo já carregado no banco de dados.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-3xl font-semibold tabular-nums">{templateCount}</p>
-        </CardContent>
-      </Card>
+      <section aria-label="Números gerais">
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatTile
+            label="Currículos"
+            value={metrics.resumes}
+            icon={FileText}
+          />
+          <StatTile label="Rascunhos" value={metrics.drafts} icon={FileEdit} />
+          <StatTile
+            label="Concluídos"
+            value={metrics.completed}
+            icon={CheckCircle2}
+          />
+          <StatTile label="Clientes" value={metrics.clients} icon={Users} />
+        </div>
+      </section>
+
+      <section aria-labelledby="templates-title" className="space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 id="templates-title" className="text-sm font-medium">
+            Modelos disponíveis
+          </h2>
+          <Button asChild variant="ghost" size="sm">
+            <Link href="/modelos">
+              Ver todos
+              <ArrowRight data-icon="inline-end" />
+            </Link>
+          </Button>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {templates.map((template) => (
+            <TemplateCard key={template.id} template={template} />
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

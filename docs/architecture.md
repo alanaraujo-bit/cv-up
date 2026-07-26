@@ -132,6 +132,25 @@ anything deriving a value from a **server** variable at module scope must live
 behind `server-only` (see `src/server/auth-config.ts`) — evaluating it on the
 client throws.
 
+## App shell
+
+`src/config/navigation.ts` is the single source for the sidebar, the mobile tab
+bar and the ⌘K palette — adding a destination is one entry, not three edits.
+`isNavItemActive` matches `/painel` exactly (otherwise every route lights it up)
+and treats `${href}/` as a child, so `/clientes-antigos` never activates
+`/clientes`.
+
+Desktop gets a sticky sidebar; below `lg` it is replaced by a fixed tab bar
+padded with `safe-bottom`, with a spacer in the layout so content is never
+trapped behind it. This is deliberately not a hamburger drawer — a drawer reads
+as a website on a phone.
+
+The ⌘K palette is bound on `document` and ignores chords carrying Alt or Shift
+so it never steals a browser shortcut. The displayed modifier comes from
+`useSyncExternalStore` with a null server snapshot: the platform is unknowable
+on the server, and this avoids both a hydration mismatch and a
+setState-in-effect round trip.
+
 ## Design system
 
 Tokens live in `src/app/globals.css`, authored in OKLCH so light and dark stay

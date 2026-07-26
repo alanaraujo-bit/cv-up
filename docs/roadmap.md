@@ -8,8 +8,8 @@ a person.
 | ------ | -------------------------------- | ------- |
 | **0**  | Foundation and architecture      | ✅ done |
 | **1**  | Database and authentication      | ✅ done |
-| **2**  | App shell and dashboard          | ⏳ next |
-| **3**  | Resume builder (core)            | —       |
+| **2**  | App shell and dashboard          | ✅ done |
+| **3**  | Resume builder (core)            | ⏳ next |
 | **4**  | Template engine and live preview | —       |
 | **5**  | PDF export                       | —       |
 | **6**  | Client management (CRM)          | —       |
@@ -42,11 +42,18 @@ production build: protected route redirects when signed out, sign-up issues a
 session cookie, the dashboard renders real data, and a wrong password returns
 `INVALID_EMAIL_OR_PASSWORD` mapped to a Portuguese message.
 
-## Phase 2 — App shell and dashboard
+## Phase 2 — App shell and dashboard ✅
 
-Sidebar on desktop, bottom navigation on mobile, safe areas, ⌘K command
-palette, dashboard with real counts (resumes, drafts, clients, completed),
-empty states, skeletons.
+Sidebar on desktop, tab bar on mobile, safe areas, ⌘K command palette,
+dashboard with real counts (resumes, drafts, completed, clients), the template
+catalogue at `/modelos`, list pages for resumes and clients, empty states and
+route-level loading skeletons.
+
+Nothing on these screens is placeholder: every number and every card comes from
+the database. The dashboard leads with the template catalogue rather than a
+"recently edited" list, because resumes cannot exist until phase 3 and a list
+that can only ever be empty is decoration. No sparklines either — a chart of
+zeros is not information.
 
 **Deliverable:** full navigation with metrics read from the database.
 
