@@ -21,6 +21,12 @@ so a file written to `public/` afterwards would not be deployed.
   development anyway, since it would serve stale assets across reloads.
 - `pnpm build` → `next build --webpack`, so the Serwist plugin runs.
 
+`next.config.ts` exports a **phase function** and skips the Serwist wrapper
+entirely when `phase === PHASE_DEVELOPMENT_SERVER`. Passing `disable: true` is
+not sufficient: the wrapper injects a `webpack` key regardless, and Turbopack
+refuses to start when it finds one. This was found only by running `pnpm dev`
+— the production build passed throughout.
+
 ## Consequences
 
 - Slower production builds than Turbopack would give. Acceptable: builds are
