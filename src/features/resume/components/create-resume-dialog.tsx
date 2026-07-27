@@ -17,6 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TemplateThumbnail } from "@/features/template/components/template-thumbnail";
 import { cn } from "@/lib/utils";
 
 import { createResumeAction } from "../actions";
@@ -110,6 +111,11 @@ export function CreateResumeDialog({
                       checked={selected}
                       onChange={() => setTemplateId(template.id)}
                       className="mt-0.5 accent-primary"
+                    />
+                    <TemplateThumbnail
+                      engineKey={template.engineKey}
+                      width={56}
+                      className="shrink-0 rounded-sm border"
                     />
                     <span className="min-w-0">
                       <span className="block text-sm font-medium">

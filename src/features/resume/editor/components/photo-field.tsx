@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import type { ResumePhoto } from "../../schemas/document";
+import { useEditorStore } from "../store-provider";
 
 const ERRORS: Record<string, string> = {
   unsupported_type: "Use uma imagem JPG, PNG ou WebP.",
@@ -26,8 +27,10 @@ export function PhotoField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   // Bumped after every change so the browser refetches instead of showing the
-  // previous photo from cache.
-  const [version, setVersion] = useState(0);
+  // previous photo from cache. It lives in the store because the live preview
+  // renders the same photo and has to refetch at the same moment.
+  const version = useEditorStore((state) => state.photoRevision);
+  const setVersion = useEditorStore((state) => state.bumpPhotoRevision);
 
   const upload = async (file: File) => {
     setBusy(true);
@@ -48,7 +51,7 @@ export function PhotoField({
       }
 
       onChange(payload as ResumePhoto);
-      setVersion((value) => value + 1);
+      setVersion();
     } catch {
       toast.error("Não foi possível enviar a foto.");
     } finally {
@@ -61,7 +64,7 @@ export function PhotoField({
     try {
       await fetch(`/api/curriculos/${resumeId}/foto`, { method: "DELETE" });
       onChange(null);
-      setVersion((value) => value + 1);
+      setVersion();
     } catch {
       toast.error("Não foi possível remover a foto.");
     } finally {

@@ -309,15 +309,23 @@ model ResumeVersion {
 // Exports, AI, billing, audit
 // ---------------------------------------------------------------------------
 
+/// Also the export queue: the renderer claims PENDING rows rather than
+/// receiving a message, so a restarted worker loses nothing (ADR 0008).
 model ExportHistory {
   id           String       @id @default(cuid(2))
   format       ExportFormat @default(PDF)
   status       ExportStatus @default(PENDING)
   templateSlug String
+  /// Private blob pathname, never a public URL — downloads go through an
+  /// ownership-checked route, as résumé photos do.
   fileUrl      String?
   fileSize     Int?
   pageCount    Int?
   error        String?
+  /// Render attempts so far. Caps how often a poisoned row is retried.
+  attempts     Int          @default(0)
+  /// When the current attempt was claimed; used to reclaim a stalled render.
+  startedAt    DateTime?
   requestedAt  DateTime     @default(now())
   completedAt  DateTime?
 
@@ -330,7 +338,8 @@ model ExportHistory {
 
   @@index([userId, requestedAt])
   @@index([resumeId, requestedAt])
-  @@index([status])
+  /// Ordered by `requestedAt` because that is exactly how the queue is drained.
+  @@index([status, requestedAt])
   @@map("export_history")
 }
 

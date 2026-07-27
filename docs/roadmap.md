@@ -10,10 +10,10 @@ a person.
 | **1**  | Database and authentication      | ✅ done |
 | **2**  | App shell and dashboard          | ✅ done |
 | **3**  | Resume builder (core)            | ✅ done |
-| **4**  | Template engine and live preview | ⏳ next |
-| **5**  | PDF export                       | —       |
-| **6**  | Client management (CRM)          | —       |
-| **7**  | Version history                  | —       |
+| **4**  | Template engine and live preview | ✅ done |
+| **5**  | PDF export                       | ✅ done |
+| **6**  | Client management (CRM)          | ✅ done |
+| **7**  | Version history                  | ⏳ next |
 | **8**  | Remaining templates and polish   | —       |
 | **9**  | AI features                      | —       |
 | **10** | SaaS preparation                 | —       |
@@ -73,27 +73,86 @@ pendency count, never as a save blocker.
 
 **Deliverable:** create and edit a complete resume that persists.
 
-## Phase 4 — Template engine and live preview
+## Phase 4 — Template engine and live preview ✅
 
-Template registry, shared primitives, three templates, instant switching
-without data loss, print CSS, page zoom and pagination in the preview.
+A registry keyed by `Template.engineKey`, shared paper primitives, three
+templates (Moderno, Executivo, Minimalista), instant template switching, print
+CSS, and a preview with real A4 sheets, zoom and page breaks.
+
+The preview does not estimate where pages break — it lays the document out once
+and measures it, then breaks only between `[data-block]` elements, which is the
+same rule `break-inside: avoid` enforces when printing (ADR 0007).
+
+Switching templates is lossless because the document knows nothing about
+templates: a template is a pure function of `ResumeDocument`, which is asserted
+by rendering the same résumé through all three engines and checking every fact
+survives.
+
+The catalogue lists only templates that have an engine. The other four stay
+seeded and inert until phase 8 — a model that renders as a blank page is
+exactly the dead UI `AGENTS.md` forbids.
 
 **Deliverable:** live preview that matches what the PDF will be.
 
-## Phase 5 — PDF export
+## Phase 5 — PDF export ✅
 
-`/render/[token]` headless route, Playwright service on Railway, object
-storage, `ExportHistory`, queueing and retry.
+`/render/[token]` headless route, the Playwright renderer in
+`services/pdf-renderer/`, PDFs in private object storage, and `ExportHistory`
+doubling as the queue with atomic claims and three attempts per job.
+
+The renderer **pulls** work instead of being pushed it (ADR 0008), so it needs
+no inbound URL, no database credentials and no storage token — and a worker
+killed mid-render leaves a row the next poll reclaims rather than a lost
+message.
+
+`/render/[token]` prints the same `PaperSheet` the editor previews, under the
+same stylesheet. The export gate promised in phase 3 is enforced here:
+advisories still never block saving, but a résumé with unresolved pendências —
+or with edits not yet saved — cannot be exported, because a PDF is what gets
+handed to a client.
+
+Export stays **hidden** until `RENDER_WORKER_SECRET` is set on both sides. An
+unconfigured deployment has no PDF export rather than a button that does
+nothing.
 
 **Deliverable:** correct page breaks, one-page and multi-page, with and
-without photo.
+without photo. **Exercised for real** against the production database: three
+résumés queued, claimed, rendered and stored — Executivo one page, Minimalista
+three, Moderno one with a photo, every sheet 595×842pt (A4 exactly).
 
-## Phase 6 — Client management (CRM)
+Two bugs only a real render could have found:
 
-Client CRUD, status kanban (new request → waiting info → in progress →
-delivered), notes, timeline, linked resumes.
+- In print the decoration becomes `position: fixed`, which paints it in the
+  positioned layer — _above_ a flow that print had made `static`. Moderno's
+  colour band covered its entire sidebar: no name, no photo, no contacts. The
+  flow is now `position: relative` with a z-index in print.
+- "Comportamental" was pluralised by appending an "s". Portuguese words in -l
+  take -is; the labels are written out now.
 
-**Deliverable:** the complete request-to-delivery workflow.
+## Phase 6 — Client management (CRM) ✅
+
+Client CRUD, a four-column board (novo pedido → aguardando dados → em
+andamento → entregue), notes, timeline, and résumés linked to the person they
+were made for.
+
+Cards drag between columns on a desktop, but every card also carries a plain
+`<select>` below `xl`: four columns do not fit on a phone, and a workflow that
+only works with a mouse is not a workflow.
+
+The timeline is **read straight out of `AuditLog`** — nothing writes to a
+separate timeline table, so it cannot drift from what actually happened. It
+records what changed, never the value: repeating a phone number on every edit
+buries the history. Ownership is checked on the client before the log is read,
+because audit rows are not themselves scoped to a user.
+
+`ARCHIVED` is deliberately not a fifth column. Archiving is how a client leaves
+the board; a column of finished work would grow without bound and squeeze the
+useful ones a little more every month.
+
+**Deliverable:** the complete request-to-delivery workflow. **Exercised for
+real**: signed up through the UI, moved a card on a 420px viewport, confirmed
+the status changed in the database and that the timeline read
+"Situação: Novo pedido → Em andamento".
 
 ## Phase 7 — Version history
 

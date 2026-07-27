@@ -50,7 +50,7 @@ Shared building blocks live outside features:
 | `src/components/`   | `brand/`, `providers/`, `shared/`, `layout/`     |
 | `src/lib/`          | `env.ts`, `site.ts`, `utils.ts`, storage adapter |
 | `src/server/`       | `db.ts`, `auth.ts`, guards, rate limiting        |
-| `src/templates/`    | resume template engine (phase 4)                 |
+| `src/templates/`    | résumé template engine (see below)               |
 
 ## The write path
 
@@ -150,6 +150,81 @@ so it never steals a browser shortcut. The displayed modifier comes from
 `useSyncExternalStore` with a null server snapshot: the platform is unknowable
 on the server, and this avoids both a hydration mismatch and a
 setState-in-effect round trip.
+
+## Template engine
+
+```
+src/templates/
+├─ registry.ts     engineKey -> engine; also *the* list of templates that exist
+├─ types.ts        the TemplateEngine contract
+├─ format.ts       document values -> printable strings
+├─ engines/        one file per template
+└─ paper/
+   ├─ geometry.ts   A4 in millimetres and CSS pixels
+   ├─ pagination.ts where the sheets break (pure, unit-tested)
+   ├─ primitives.tsx blocks, entries, prose — shared by every template
+   └─ paper-sheet.tsx one A4 sheet
+```
+
+An engine is `{ key, theme, Decoration?, Flow }`. `Flow` is a pure function of
+`ResumeDocument`, which is what makes switching templates lossless — no résumé
+content lives in the choice of template. `Decoration` is per _sheet_ rather
+than part of the flow, so a colour band survives a page break.
+
+A template's only colour is `theme.accent`; everything else comes from the
+`[data-paper]` token layer in `globals.css`. Those tokens are deliberately not
+on `:root` — paper stays white in dark mode, because it is printed matter and
+not a UI surface.
+
+`Template.engineKey` in the database resolves through the registry, and the
+registry is also the definition of which templates the product has: the
+catalogue query filters on it, so a seeded template with no engine never
+reaches a picker.
+
+Pagination measures rather than predicts — see ADR 0007.
+
+## Client management
+
+`src/features/client/` holds the board, the detail screen and the write path.
+Status lives on `Client.status`; the board renders four of the five values and
+treats `ARCHIVED` as "off the board" rather than a column.
+
+The client timeline is derived, not stored: `getClientTimeline` reads `AuditLog`
+rows for `entity: "Client"`. Every write in the client service records one
+through `src/server/audit.ts`, which swallows its own failures — a lost log
+line is a smaller problem than a status change rolled back because logging it
+failed.
+
+`AuditLog` has no `userId`, so it is never queried by `entityId` alone.
+Ownership is proved on the client first, then the log is read.
+
+## PDF export
+
+The only part of the product that is not the Next.js app. It lives in
+`services/pdf-renderer/` and is deployed separately (ADR 0002).
+
+```
+editor  ──requestExport──▶  ExportHistory row (PENDING)
+                                   ▲  │
+   renderer ──POST /api/render/claim  │  atomic claim -> PROCESSING
+            ◀── { exportId, renderUrl }
+            ──▶ GET /render/[token]      prints the résumé
+            ──POST /api/render/complete──▶ PDF -> private blob, READY
+```
+
+`ExportHistory` **is** the queue (ADR 0008). A claim is a conditional update on
+`attempts`, so replicas never collide; a row stuck in `PROCESSING` past two
+minutes is reclaimable, which turns a killed worker into a retry.
+
+`/render/[token]` renders somebody's private résumé without a session cookie,
+so the token is the whole security boundary: HMAC-signed with a key derived
+from `BETTER_AUTH_SECRET` via HKDF, valid for five minutes, naming one export —
+and refused once that export leaves `PROCESSING`. The résumé photo has its own
+token-authenticated route for the same reason.
+
+Finished PDFs go to the same private store as photos and are downloaded through
+an ownership-checked route. `ExportHistory.fileUrl` holds a blob **pathname**,
+never a public URL.
 
 ## Design system
 

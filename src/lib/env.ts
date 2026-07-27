@@ -24,8 +24,15 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
 
-    /** Private blob store holding resume photos. */
+    /** Private blob store holding resume photos and exported PDFs. */
     BLOB_READ_WRITE_TOKEN: z.string().min(1),
+
+    /**
+     * Shared secret the PDF renderer authenticates with. Optional: PDF export
+     * stays hidden until a renderer is actually reachable, the same way Google
+     * sign-in does — a download button with nothing behind it is dead UI.
+     */
+    RENDER_WORKER_SECRET: z.string().min(32).optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
@@ -38,6 +45,7 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
+    RENDER_WORKER_SECRET: process.env.RENDER_WORKER_SECRET,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
   emptyStringAsUndefined: true,

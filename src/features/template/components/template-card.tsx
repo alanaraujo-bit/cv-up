@@ -1,11 +1,12 @@
 import { Camera, ShieldCheck } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { TemplateThumbnail } from "@/features/template/components/template-thumbnail";
 import type { TemplateSummary } from "@/features/template/service";
 
 /**
- * Preview thumbnails arrive with the template engine in phase 4; until then the
- * card leads with the template's accent colour rather than a fake screenshot.
+ * The card leads with the template rendered for real, by the same engine the
+ * editor uses — never a screenshot that can go stale.
  */
 export function TemplateCard({ template }: { template: TemplateSummary }) {
   return (
@@ -15,6 +16,13 @@ export function TemplateCard({ template }: { template: TemplateSummary }) {
         style={{ backgroundColor: template.accentColor ?? "var(--primary)" }}
         aria-hidden
       />
+
+      <div className="flex justify-center overflow-hidden border-b bg-muted/40 pt-4">
+        <TemplateThumbnail
+          engineKey={template.engineKey}
+          className="elevation-low"
+        />
+      </div>
 
       <div className="flex flex-1 flex-col gap-2 p-4">
         <div className="flex items-start justify-between gap-2">

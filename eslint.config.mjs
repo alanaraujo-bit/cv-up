@@ -13,6 +13,7 @@ const eslintConfig = defineConfig([
     "public/sw.js",
     "public/swe-worker-*.js",
     "src/generated/**",
+    "services/*/node_modules/**",
   ]),
   {
     rules: {
@@ -50,6 +51,9 @@ const eslintConfig = defineConfig([
       "prisma/**/*.ts",
       "src/lib/env.ts",
       "src/app/sw.ts",
+      // The PDF renderer is a separate deployable; it has no Next.js runtime
+      // and therefore no `@/lib/env` to import.
+      "services/**/*.mjs",
     ],
     rules: { "no-restricted-properties": "off" },
   },

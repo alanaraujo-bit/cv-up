@@ -26,7 +26,13 @@ export default async function AppLayout({
           image={session.user.image ?? null}
         />
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 safe-x sm:py-8">
+        {/*
+          Content width belongs to the shell, except where a screen genuinely
+          needs the whole viewport — the editor puts a full A4 sheet next to the
+          form. Such a screen marks itself `data-layout="wide"` rather than the
+          shell keeping a list of routes that are special.
+        */}
+        <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 safe-x has-[[data-layout=wide]]:max-w-[100rem] sm:py-8">
           {children}
         </main>
 

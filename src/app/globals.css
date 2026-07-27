@@ -12,6 +12,7 @@
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
   --font-mono: var(--font-mono);
 
   --color-background: var(--background);
@@ -351,4 +352,191 @@
 }
 @utility elevation-high {
   box-shadow: var(--shadow-elevation-high);
+}
+
+/* --------------------------------------------------------------------------
+   Paper — the résumé document itself
+   A résumé is printed matter, not a UI surface: it stays white in dark mode,
+   is measured in millimetres, and takes its colours from the chosen template
+   rather than from the app theme. These tokens are declared on [data-paper]
+   instead of :root precisely so `.dark` cannot reach them.
+-------------------------------------------------------------------------- */
+[data-paper] {
+  /* A4 — the only page size that matters here. */
+  --page-width: 210mm;
+  --page-height: 297mm;
+
+  /*
+   * Only `@page` margins repeat on every printed sheet, and Chromium does not
+   * resolve custom properties inside `@page`. So the vertical margin is a
+   * constant, duplicated literally in the print block below, and horizontal
+   * margin — the one templates actually want to vary — rides along with the
+   * flow, where padding does repeat.
+   */
+  --page-margin-y: 13mm;
+  --page-margin-x: 16mm;
+
+  --paper: #fff;
+  --ink: oklch(0.23 0.012 268);
+  --ink-soft: oklch(0.45 0.01 268);
+  --ink-faint: oklch(0.585 0.008 268);
+  --rule: oklch(0.87 0.004 268);
+
+  /* Replaced per template by the theme in src/templates/registry.ts. */
+  --accent: oklch(0.5 0.18 268);
+  --accent-contrast: #fff;
+  --accent-wash: color-mix(in oklab, var(--accent) 7%, #fff);
+  --accent-rule: color-mix(in oklab, var(--accent) 32%, #fff);
+
+  --paper-font: var(--font-sans);
+  --paper-base: 10pt;
+  --paper-leading: 1.45;
+}
+
+@layer components {
+  /* One sheet. Fixed physical size, so what is on screen is what prints. */
+  .paper-page {
+    position: relative;
+    overflow: hidden;
+    width: var(--page-width);
+    height: var(--page-height);
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--paper-font);
+    font-size: var(--paper-base);
+    line-height: var(--paper-leading);
+    /* The résumé is the one thing on screen the user may want to copy out of. */
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  /* Full-bleed template chrome (colour bands, rules) painted behind the flow. */
+  .paper-decoration {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  /* The printable area of one sheet: everything inside the margins. */
+  .paper-window {
+    position: absolute;
+    inset: var(--page-margin-y) var(--page-margin-x);
+    overflow: hidden;
+  }
+
+  /*
+   * The whole document, laid out once. Every sheet holds a copy translated so
+   * that its own slice shows through .paper-window — which is why a page break
+   * is a single number rather than a re-layout.
+   */
+  .paper-flow {
+    position: absolute;
+    inset-inline: 0;
+    top: 0;
+    /* Above `.paper-decoration`, which is opaque where a template paints a band. */
+    z-index: 1;
+  }
+}
+
+@utility paper-ink {
+  color: var(--ink);
+}
+@utility paper-ink-soft {
+  color: var(--ink-soft);
+}
+@utility paper-ink-faint {
+  color: var(--ink-faint);
+}
+@utility paper-ink-accent {
+  color: var(--accent);
+}
+@utility paper-ink-contrast {
+  color: var(--accent-contrast);
+}
+@utility paper-bg-accent {
+  background-color: var(--accent);
+}
+@utility paper-bg-wash {
+  background-color: var(--accent-wash);
+}
+@utility paper-rule {
+  border-color: var(--rule);
+}
+@utility paper-rule-accent {
+  border-color: var(--accent-rule);
+}
+@utility paper-rule-strong {
+  border-color: var(--accent);
+}
+
+/* --------------------------------------------------------------------------
+   Print
+   The screen preview paginates by hand (see src/templates/paper/pagination.ts).
+   The browser must not paginate that a second time, so printing collapses the
+   sheets back into one continuous flow and lets Chromium break it — against the
+   same [data-block] boundaries the preview used, which is why the two agree.
+-------------------------------------------------------------------------- */
+@media print {
+  @page {
+    size: A4;
+    /* Keep in sync with --page-margin-y above. */
+    margin: 13mm 0;
+  }
+
+  [data-print-hide] {
+    display: none !important;
+  }
+
+  .paper-stack {
+    transform: none !important;
+    width: auto !important;
+    height: auto !important;
+    gap: 0 !important;
+  }
+
+  /* Sheets after the first are screen-only copies of the same flow. */
+  .paper-page {
+    display: none;
+  }
+
+  .paper-page:first-child {
+    display: block;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    box-shadow: none;
+  }
+
+  .paper-page:first-child .paper-window {
+    position: static;
+    overflow: visible;
+    padding-inline: var(--page-margin-x);
+  }
+
+  /*
+   * `relative` rather than `static`: the flow has to stay in normal flow so
+   * Chromium paginates it, but it also has to keep a z-index — a static element
+   * would be painted *below* the fixed decoration, which is opaque wherever a
+   * template draws a colour band, and the band would swallow a whole column.
+   */
+  .paper-page:first-child .paper-flow {
+    position: relative;
+    transform: none !important;
+  }
+
+  /* Fixed elements are what Chromium repeats on every printed sheet. */
+  .paper-page:first-child .paper-decoration {
+    position: fixed;
+  }
+
+  [data-block] {
+    break-inside: avoid;
+  }
+
+  p,
+  li {
+    orphans: 3;
+    widows: 3;
+  }
 }

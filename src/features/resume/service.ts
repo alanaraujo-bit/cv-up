@@ -3,6 +3,7 @@ import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { ResumeStatus } from "@/generated/prisma/enums";
 import { db } from "@/server/db";
+import { RENDERABLE_ENGINE_KEYS } from "@/templates/registry";
 
 import {
   CURRENT_SCHEMA_VERSION,
@@ -25,6 +26,9 @@ export interface ResumeEditorData {
   title: string;
   status: ResumeStatus;
   templateId: string;
+  /** Resolves to a component in `src/templates/registry.ts`. */
+  templateEngineKey: string;
+  templateName: string;
   clientId: string | null;
   document: ResumeDocument;
   lastEditedAt: Date;
@@ -73,6 +77,7 @@ export async function getResumeForUser(
       title: true,
       status: true,
       templateId: true,
+      template: { select: { engineKey: true, name: true } },
       clientId: true,
       content: true,
       lastEditedAt: true,
@@ -86,6 +91,8 @@ export async function getResumeForUser(
     title: row.title,
     status: row.status,
     templateId: row.templateId,
+    templateEngineKey: row.template.engineKey,
+    templateName: row.template.name,
     clientId: row.clientId,
     document: parseStoredDocument(row.content),
     lastEditedAt: row.lastEditedAt,
@@ -137,6 +144,37 @@ export async function saveResumeDocument(
           ? ResumeStatus.IN_PROGRESS
           : ResumeStatus.DRAFT,
     },
+  });
+
+  return count > 0;
+}
+
+/**
+ * Switches the template a résumé renders with.
+ *
+ * `content` is deliberately untouched: the document knows nothing about
+ * templates, which is what makes switching lossless no matter how different the
+ * two layouts are. A template with no engine is rejected here so a résumé can
+ * never point at something that renders as a blank page.
+ */
+export async function setResumeTemplate(
+  userId: string,
+  resumeId: string,
+  templateId: string,
+): Promise<boolean> {
+  const template = await db.template.findFirst({
+    where: {
+      id: templateId,
+      isActive: true,
+      engineKey: { in: RENDERABLE_ENGINE_KEYS },
+    },
+    select: { id: true },
+  });
+  if (!template) return false;
+
+  const { count } = await db.resume.updateMany({
+    where: { id: resumeId, userId, deletedAt: null },
+    data: { templateId: template.id, lastEditedAt: new Date() },
   });
 
   return count > 0;

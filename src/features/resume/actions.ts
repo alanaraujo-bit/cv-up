@@ -12,6 +12,7 @@ import {
   renameResume,
   saveResumeDocument,
   setResumeStatus,
+  setResumeTemplate,
   softDeleteResume,
 } from "./service";
 
@@ -48,6 +49,22 @@ export const saveResumeDocumentAction = authActionClient
     revalidatePath("/curriculos");
     revalidatePath("/painel");
     return { savedAt: new Date().toISOString() };
+  });
+
+export const setResumeTemplateAction = authActionClient
+  .inputSchema(
+    z.object({ resumeId, templateId: z.string().min(1, "Escolha um modelo.") }),
+  )
+  .action(async ({ parsedInput, ctx }) => {
+    const changed = await setResumeTemplate(
+      ctx.userId,
+      parsedInput.resumeId,
+      parsedInput.templateId,
+    );
+    if (!changed) throw new Error("Modelo indisponível.");
+
+    revalidatePath("/curriculos");
+    return { templateId: parsedInput.templateId };
   });
 
 export const renameResumeAction = authActionClient

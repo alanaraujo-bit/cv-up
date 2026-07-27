@@ -1,11 +1,9 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo } from "react";
-import { ArrowLeft, GripVertical, Redo2, Undo2 } from "lucide-react";
+import { useMemo } from "react";
+import { GripVertical } from "lucide-react";
 
 import { SortableItem, SortableList } from "@/components/shared/sortable-list";
-import { Button } from "@/components/ui/button";
 
 import type { ResumeEditorData } from "../../service";
 import type { PersonalInfo, SectionType } from "../../schemas/document";
@@ -24,56 +22,23 @@ import {
   updatePersonal,
 } from "../operations";
 import { useEditorStore } from "../store-provider";
-import { useAutosave } from "../use-autosave";
 import { AddSectionMenu } from "./add-section-menu";
 import { PersonalCard } from "./personal-card";
-import { SaveIndicator } from "./save-indicator";
 import { SectionCard } from "./section-card";
 
+/**
+ * The form half of the workspace. Autosave, undo/redo and the document title
+ * live in `EditorWorkspace`, which owns both panes.
+ */
 export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
   const document = useEditorStore((state) => state.document);
   const edit = useEditorStore((state) => state.edit);
   const commit = useEditorStore((state) => state.commit);
-  const undo = useEditorStore((state) => state.undo);
-  const redo = useEditorStore((state) => state.redo);
-  const canUndo = useEditorStore((state) => state.past.length > 0);
-  const canRedo = useEditorStore((state) => state.future.length > 0);
-
-  useAutosave(resume.id);
 
   const advisories = useMemo(() => collectAdvisories(document), [document]);
   const requiredCount = advisories.filter(
     (item) => item.severity === "required",
   ).length;
-
-  // ⌘Z / ⌘⇧Z, skipped while the caret is in a field so the browser's own
-  // text undo keeps working where the user expects it.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (
-        !(event.metaKey || event.ctrlKey) ||
-        event.key.toLowerCase() !== "z"
-      ) {
-        return;
-      }
-
-      const target = event.target as HTMLElement | null;
-      if (
-        target instanceof HTMLInputElement ||
-        target instanceof HTMLTextAreaElement ||
-        target?.isContentEditable
-      ) {
-        return;
-      }
-
-      event.preventDefault();
-      if (event.shiftKey) redo();
-      else undo();
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [undo, redo]);
 
   const handlePersonal = (patch: Partial<PersonalInfo>) =>
     edit(updatePersonal(document, patch));
@@ -83,41 +48,6 @@ export function ResumeEditor({ resume }: { resume: ResumeEditorData }) {
 
   return (
     <div className="space-y-4">
-      <header className="sticky top-14 z-10 -mx-4 flex flex-wrap items-center gap-2 border-b bg-background/90 px-4 py-2 safe-x backdrop-blur-md">
-        <Button asChild variant="ghost" size="icon-sm">
-          <Link href="/curriculos" aria-label="Voltar para a lista">
-            <ArrowLeft />
-          </Link>
-        </Button>
-
-        <h1 className="min-w-0 flex-1 truncate text-sm font-medium">
-          {resume.title}
-        </h1>
-
-        <SaveIndicator />
-
-        <div className="flex items-center gap-0.5">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={undo}
-            disabled={!canUndo}
-            aria-label="Desfazer"
-          >
-            <Undo2 />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={redo}
-            disabled={!canRedo}
-            aria-label="Refazer"
-          >
-            <Redo2 />
-          </Button>
-        </div>
-      </header>
-
       {requiredCount > 0 ? (
         <p
           className="text-xs text-muted-foreground"

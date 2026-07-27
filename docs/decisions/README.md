@@ -12,3 +12,5 @@ history; supersede instead of deleting.
 | [0004](0004-better-auth.md)                            | Better Auth over Auth.js                           |
 | [0005](0005-webpack-for-production-builds.md)          | Production builds run on webpack, not Turbopack    |
 | [0006](0006-permissive-storage-advisory-validation.md) | Permissive storage, advisory validation            |
+| [0007](0007-measured-pagination.md)                    | Pagination by measuring one flow                   |
+| [0008](0008-renderer-pulls-work.md)                    | The PDF renderer pulls work; the app never pushes  |

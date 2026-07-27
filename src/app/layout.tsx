@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Source_Serif_4 } from "next/font/google";
 
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
@@ -10,6 +10,17 @@ import "./globals.css";
 
 const geistSans = Geist({ subsets: ["latin"], variable: "--font-sans" });
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
+
+/**
+ * Only résumé templates use the serif, and self-hosting it is what makes the
+ * PDF renderer produce the same metrics as the browser (ADR 0002). It is not
+ * preloaded because most screens never paint a single glyph of it.
+ */
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  variable: "--font-serif",
+  preload: false,
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -64,7 +75,11 @@ export default function RootLayout({
     <html
       lang="pt-BR"
       suppressHydrationWarning
-      className={cn(geistSans.variable, geistMono.variable)}
+      className={cn(
+        geistSans.variable,
+        geistMono.variable,
+        sourceSerif.variable,
+      )}
     >
       <body className="min-h-dvh antialiased">
         <ThemeProvider

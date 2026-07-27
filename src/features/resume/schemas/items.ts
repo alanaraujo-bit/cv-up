@@ -111,3 +111,16 @@ export const SKILL_CATEGORY_LABEL: Record<
   technical: "Técnica",
   soft: "Comportamental",
 };
+
+/**
+ * Written out rather than derived. Portuguese does not pluralise by appending
+ * an "s": "Comportamental" becomes "Comportamentais", and printing
+ * "Comportamentals" on a résumé is the kind of mistake a client notices.
+ */
+export const SKILL_CATEGORY_PLURAL: Record<
+  (typeof SKILL_CATEGORIES)[number],
+  string
+> = {
+  technical: "Técnicas",
+  soft: "Comportamentais",
+};

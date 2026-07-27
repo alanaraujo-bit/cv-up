@@ -23,6 +23,14 @@ export interface EditorState {
   saveState: SaveState;
   lastSavedAt: Date | null;
 
+  /**
+   * Bumped whenever the photo is replaced or removed. The photo is served from
+   * an ownership-checked route under a private cache and always at the same
+   * path, so both the editor and the preview need a new URL to stop showing
+   * the previous face.
+   */
+  photoRevision: number;
+
   /** Field edits — coalesced into the previous history entry when rapid. */
   edit: (next: ResumeDocument) => void;
   /** Structural edits (add/remove/reorder) — always their own undo step. */
@@ -32,6 +40,7 @@ export interface EditorState {
 
   setSaveState: (state: SaveState) => void;
   markSaved: (at: Date) => void;
+  bumpPhotoRevision: () => void;
 }
 
 export type EditorStore = ReturnType<typeof createEditorStore>;
@@ -53,6 +62,7 @@ export function createEditorStore(initial: ResumeDocument) {
     lastPushAt: 0,
     saveState: "idle",
     lastSavedAt: null,
+    photoRevision: 0,
 
     edit: (next) =>
       set((state) => {
@@ -108,5 +118,7 @@ export function createEditorStore(initial: ResumeDocument) {
 
     setSaveState: (saveState) => set({ saveState }),
     markSaved: (at) => set({ saveState: "saved", lastSavedAt: at }),
+    bumpPhotoRevision: () =>
+      set((state) => ({ photoRevision: state.photoRevision + 1 })),
   }));
 }
